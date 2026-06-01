@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
@@ -145,9 +145,23 @@ const s = {
    HOME PAGE
 ══════════════════════════════════════════════ */
 const Home = () => {
+  const [serverStatus, setServerStatus] = useState('Checking API Connection...');
+
+  useEffect(() => {
+    fetch('http://localhost:5001/api/health')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === 'success') setServerStatus('Connected to Backend ✅');
+      })
+      .catch((err) => setServerStatus('Backend Offline ❌'));
+  }, []);
+
   return (
     <div style={s.page}>
       <Navbar />
+      <div style={{ textAlign: 'center', padding: '10px', background: 'rgba(99,102,241,0.1)', fontSize: '14px', borderBottom: '1px solid rgba(99,102,241,0.2)', color: '#818cf8', fontWeight: 'bold' }}>
+        System Status: {serverStatus}
+      </div>
 
       {/* ── HERO ── */}
       <section style={{ position: 'relative', overflow: 'hidden', padding: '100px 24px 120px', textAlign: 'center' }}>
