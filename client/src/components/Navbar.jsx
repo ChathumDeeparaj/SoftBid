@@ -11,14 +11,39 @@ const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', onScroll);
+    
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(payload.role);
+      } catch (e) {
+        console.error('Invalid token');
+      }
+    }
+    
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setUserRole(null);
+    window.location.href = '/';
+  };
+
+  const getDashboardLink = () => {
+    if (userRole === 'admin') return '/admin/dashboard';
+    if (userRole === 'client') return '/client/dashboard';
+    return '/provider/dashboard';
+  };
 
   return (
     <nav
@@ -99,62 +124,118 @@ const Navbar = () => {
 
           {/* ── Auth buttons ── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }} className="navbar-desktop-links">
-            {/* Sign In */}
-            <Link to="/signin" style={{ textDecoration: 'none' }}>
-              <button
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: '9px',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  background: 'transparent',
-                  color: 'rgba(209,213,219,0.9)',
-                  border: '1px solid rgba(99,102,241,0.4)',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(99,102,241,0.12)';
-                  e.currentTarget.style.color = '#a5b4fc';
-                  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.7)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = 'rgba(209,213,219,0.9)';
-                  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)';
-                }}
-              >
-                Sign In
-              </button>
-            </Link>
+            {userRole ? (
+              <>
+                <Link to={getDashboardLink()} style={{ textDecoration: 'none' }}>
+                  <button
+                    style={{
+                      padding: '8px 20px',
+                      borderRadius: '9px',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      background: 'transparent',
+                      color: 'rgba(209,213,219,0.9)',
+                      border: '1px solid rgba(99,102,241,0.4)',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(99,102,241,0.12)';
+                      e.currentTarget.style.color = '#a5b4fc';
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.7)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'rgba(209,213,219,0.9)';
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)';
+                    }}
+                  >
+                    Dashboard
+                  </button>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '9px',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    border: '1px solid rgba(239,68,68,0.4)',
+                    background: 'rgba(239,68,68,0.1)',
+                    color: '#fca5a5',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(239,68,68,0.2)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                  }}
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Sign In */}
+                <Link to="/signin" style={{ textDecoration: 'none' }}>
+                  <button
+                    style={{
+                      padding: '8px 20px',
+                      borderRadius: '9px',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      background: 'transparent',
+                      color: 'rgba(209,213,219,0.9)',
+                      border: '1px solid rgba(99,102,241,0.4)',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(99,102,241,0.12)';
+                      e.currentTarget.style.color = '#a5b4fc';
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.7)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'rgba(209,213,219,0.9)';
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)';
+                    }}
+                  >
+                    Sign In
+                  </button>
+                </Link>
 
-            {/* Sign Up */}
-            <Link to="/signup" style={{ textDecoration: 'none' }}>
-              <button
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: '9px',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.25s ease',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                  color: '#fff',
-                  boxShadow: '0 0 18px rgba(99,102,241,0.35)',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = '0 0 26px rgba(99,102,241,0.6)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = '0 0 18px rgba(99,102,241,0.35)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                Sign Up
-              </button>
-            </Link>
+                {/* Sign Up */}
+                <Link to="/signup" style={{ textDecoration: 'none' }}>
+                  <button
+                    style={{
+                      padding: '8px 20px',
+                      borderRadius: '9px',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.25s ease',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      color: '#fff',
+                      boxShadow: '0 0 18px rgba(99,102,241,0.35)',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.boxShadow = '0 0 26px rgba(99,102,241,0.6)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.boxShadow = '0 0 18px rgba(99,102,241,0.35)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    Sign Up
+                  </button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* ── Hamburger (mobile) ── */}
@@ -214,21 +295,40 @@ const Navbar = () => {
             </Link>
           ))}
           <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-            <Link to="/signin" style={{ flex: 1, textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
-              <button style={{
-                width: '100%', padding: '10px', borderRadius: '9px', fontWeight: 600,
-                fontSize: '0.875rem', cursor: 'pointer', background: 'transparent',
-                color: 'rgba(209,213,219,0.9)', border: '1px solid rgba(99,102,241,0.4)',
-              }}>Sign In</button>
-            </Link>
-            <Link to="/signup" style={{ flex: 1, textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
-              <button style={{
-                width: '100%', padding: '10px', borderRadius: '9px', fontWeight: 600,
-                fontSize: '0.875rem', cursor: 'pointer', border: 'none',
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                color: '#fff',
-              }}>Sign Up</button>
-            </Link>
+            {userRole ? (
+              <>
+                <Link to={getDashboardLink()} style={{ flex: 1, textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
+                  <button style={{
+                    width: '100%', padding: '10px', borderRadius: '9px', fontWeight: 600,
+                    fontSize: '0.875rem', cursor: 'pointer', background: 'transparent',
+                    color: 'rgba(209,213,219,0.9)', border: '1px solid rgba(99,102,241,0.4)',
+                  }}>Dashboard</button>
+                </Link>
+                <button onClick={() => { handleLogout(); setMenuOpen(false); }} style={{
+                  flex: 1, width: '100%', padding: '10px', borderRadius: '9px', fontWeight: 600,
+                  fontSize: '0.875rem', cursor: 'pointer', border: '1px solid rgba(239,68,68,0.4)',
+                  background: 'rgba(239,68,68,0.1)', color: '#fca5a5',
+                }}>Logout</button>
+              </>
+            ) : (
+              <>
+                <Link to="/signin" style={{ flex: 1, textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
+                  <button style={{
+                    width: '100%', padding: '10px', borderRadius: '9px', fontWeight: 600,
+                    fontSize: '0.875rem', cursor: 'pointer', background: 'transparent',
+                    color: 'rgba(209,213,219,0.9)', border: '1px solid rgba(99,102,241,0.4)',
+                  }}>Sign In</button>
+                </Link>
+                <Link to="/signup" style={{ flex: 1, textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
+                  <button style={{
+                    width: '100%', padding: '10px', borderRadius: '9px', fontWeight: 600,
+                    fontSize: '0.875rem', cursor: 'pointer', border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    color: '#fff',
+                  }}>Sign Up</button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

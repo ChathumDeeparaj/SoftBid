@@ -39,7 +39,7 @@ export default function Signin() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (!form.email || !form.password) {
       setError('Please provide both email and password.');
       return;
@@ -54,19 +54,21 @@ export default function Signin() {
       });
 
       const data = await res.json();
-      
+
       if (res.ok) {
         // Save token to localStorage
         localStorage.setItem('token', data.token);
-        
+
         // Navigate based on role
         if (data.role === 'provider') {
           navigate('/provider/dashboard');
         } else if (data.role === 'client') {
           navigate('/client/dashboard');
+        } else if (data.role === 'admin') {
+          navigate('/admin/dashboard');
         } else {
           // Fallback
-          navigate('/dashboard');
+          navigate('/');
         }
       } else {
         setError(data.message || 'Invalid email or password.');
@@ -113,7 +115,7 @@ export default function Signin() {
         <div style={{ width: '100%', maxWidth: '450px' }}>
           {/* Card */}
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '40px 36px' }}>
-            
+
             <h1 style={{ fontSize: '1.7rem', fontWeight: 900, color: '#f1f5f9', margin: '0 0 8px', letterSpacing: '-0.03em' }}>
               Welcome back
             </h1>
@@ -129,7 +131,7 @@ export default function Signin() {
               <Field label="Email Address">
                 <Input type="email" placeholder="john@example.com" value={form.email} onChange={set('email')} />
               </Field>
-              
+
               <Field label="Password">
                 <Input type="password" placeholder="••••••••" value={form.password} onChange={set('password')} />
               </Field>

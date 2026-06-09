@@ -188,6 +188,55 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Features Management */}
+            <div style={{ marginTop: '48px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '1.5rem', color: '#f1f5f9' }}>Manage Features & Base FP</h2>
+                <button type="button" onClick={() => {
+                  const newId = 'feature_' + Date.now();
+                  setNpeConfig({
+                    ...npeConfig,
+                    features: [...(npeConfig.features || []), { id: newId, label: 'New Feature', baseFP: 10 }]
+                  });
+                }} style={{ padding: '8px 16px', background: 'rgba(16,185,129,0.2)', color: '#34d399', border: '1px solid rgba(16,185,129,0.4)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
+                  + Add Feature
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                {(npeConfig.features || []).map((f, i) => (
+                  <div key={f.id} style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px' }}>Label</label>
+                      <input type="text" value={f.label} onChange={e => {
+                        const newFeatures = [...npeConfig.features];
+                        newFeatures[i].label = e.target.value;
+                        setNpeConfig({...npeConfig, features: newFeatures});
+                      }} style={{ width: '100%', padding: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ flex: 1, marginRight: '16px' }}>
+                        <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '4px' }}>Base FP</label>
+                        <input type="number" value={f.baseFP} onChange={e => {
+                          const newFeatures = [...npeConfig.features];
+                          newFeatures[i].baseFP = Number(e.target.value);
+                          setNpeConfig({...npeConfig, features: newFeatures});
+                        }} style={{ width: '100%', padding: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px' }} />
+                      </div>
+                      <button type="button" onClick={() => {
+                        setNpeConfig({
+                          ...npeConfig,
+                          features: npeConfig.features.filter(feat => feat.id !== f.id)
+                        });
+                      }} style={{ padding: '8px 12px', background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', cursor: 'pointer', alignSelf: 'flex-end' }}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <button type="submit" style={{ padding: '12px 24px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
               Save NPE Configuration
             </button>

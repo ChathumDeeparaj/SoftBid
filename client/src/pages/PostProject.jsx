@@ -3,18 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import NPEWarningModal from '../components/NPEWarningModal';
 
-const featureOptions = [
-  { id: 'user_auth', label: 'User Login / Registration', baseFP: 8 },
-  { id: 'role_based_access', label: 'Role-based Access Control', baseFP: 6 },
-  { id: 'payment', label: 'Payment Gateway Integration', baseFP: 15 },
-  { id: 'admin_dashboard', label: 'Admin Dashboard', baseFP: 12 },
-  { id: 'mobile_responsive', label: 'Mobile Responsive UI', baseFP: 5 },
-  { id: 'api_integration', label: 'Third-party API Integration', baseFP: 10 },
-  { id: 'reporting', label: 'Reports & Analytics', baseFP: 10 },
-  { id: 'file_uploads', label: 'File Upload / Management', baseFP: 6 },
-  { id: 'real_time', label: 'Real-time Updates (WebSockets)', baseFP: 13 },
-  { id: 'custom_workflow', label: 'Custom Workflow Engine', baseFP: 20 },
-];
+// Removed hardcoded featureOptions - fetching dynamically from API
 
 export default function PostProject() {
   const navigate = useNavigate();
@@ -33,13 +22,54 @@ export default function PostProject() {
   const [integrations, setIntegrations] = useState(0);
   const [securityLevel, setSecurityLevel] = useState('basic');
 
+  // Dynamic features and providers from backend
+  const [dynamicFeatures, setDynamicFeatures] = useState([]);
+  const [availableProviders, setAvailableProviders] = useState([]);
+  const [invitedProviders, setInvitedProviders] = useState([]);
+
   // Step 3 (NPE) data
   const [npeResult, setNpeResult] = useState(null);
   const [showWarningModal, setShowWarningModal] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) navigate('/signin');
+    if (!token) {
+      navigate('/signin');
+      return;
+    }
+
+    // Fetch NPE config to get dynamic features
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch('http://localhost:5001/api/npe/config', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const config = await res.json();
+          setDynamicFeatures(config.features || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch NPE config:', err);
+      }
+    };
+    
+    // Fetch registered providers to allow inviting favorites
+    const fetchProviders = async () => {
+      try {
+        const res = await fetch('http://localhost:5001/api/users/providers', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAvailableProviders(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch providers:', err);
+      }
+    };
+
+    fetchConfig();
+    fetchProviders();
   }, [navigate]);
 
   const handleNextStep = () => {
@@ -112,16 +142,24 @@ export default function PostProject() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const payload = {
+        title,
+        description,
+        timeframe,
+        clientBudgetLKR: Number(clientBudgetLKR),
+        selectedFeatures,
+        integrations: Number(integrations),
+        securityLevel,
+        riskAccepted,
+        invitedProviders
+      };
       const res = await fetch('http://localhost:5001/api/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title, description, timeframe, clientBudgetLKR,
-          selectedFeatures, integrations, securityLevel, riskAccepted
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
@@ -219,24 +257,50 @@ export default function PostProject() {
               <h2 style={{ fontSize: '1.8rem', color: '#f1f5f9', marginBottom: '12px' }}>Scope & Complexity</h2>
               <p style={{ color: '#94a3b8', marginBottom: '32px' }}>Select the features you need. This helps our NPE Engine calculate a fair market estimate.</p>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-                {featureOptions.map(f => {
-                  const isSelected = selectedFeatures.includes(f.id);
-                  return (
-                    <div key={f.id} onClick={() => toggleFeature(f.id)} style={{
-                      padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s',
-                      background: isSelected ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.1)'}`,
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '20px', height: '20px', borderRadius: '6px', border: `2px solid ${isSelected ? '#6366f1' : '#64748b'}`, background: isSelected ? '#6366f1' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {isSelected && <span style={{ color: '#fff', fontSize: '12px' }}>✓</span>}
+              <div style={{ marginBottom: '32px' }}>
+                <label style={labelStyle}>Add a Feature</label>
+                {dynamicFeatures.length === 0 && <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Loading features...</p>}
+                
+                <select 
+                  style={{ ...inputStyle, marginBottom: 0, width: '100%' }} 
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value && !selectedFeatures.includes(e.target.value)) {
+                      setSelectedFeatures([...selectedFeatures, e.target.value]);
+                    }
+                  }}
+                >
+                  <option value="">-- Select a feature from the list --</option>
+                  {dynamicFeatures.filter(f => !selectedFeatures.includes(f.id)).map(f => (
+                    <option key={f.id} value={f.id}>{f.label} (Base FP: {f.baseFP})</option>
+                  ))}
+                </select>
+
+                {/* Selected Features Chips */}
+                {selectedFeatures.length > 0 && (
+                  <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {selectedFeatures.map(id => {
+                      const feat = dynamicFeatures.find(f => f.id === id);
+                      if (!feat) return null;
+                      return (
+                        <div key={id} style={{
+                          background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+                          color: '#c7d2fe', padding: '8px 12px', borderRadius: '20px', fontSize: '0.85rem',
+                          display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600
+                        }}>
+                          <span>{feat.label}</span>
+                          <button 
+                            type="button"
+                            onClick={() => setSelectedFeatures(selectedFeatures.filter(f => f !== id))}
+                            style={{ background: 'transparent', border: 'none', color: '#818cf8', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', fontSize: '1rem', marginLeft: '4px' }}
+                          >
+                            ✕
+                          </button>
                         </div>
-                        <span style={{ color: isSelected ? '#f1f5f9' : '#cbd5e1', fontWeight: 600, fontSize: '0.95rem' }}>{f.label}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
@@ -265,6 +329,51 @@ export default function PostProject() {
                 <button style={{ ...btnStyle, flex: 2 }} onClick={handleNextStep} disabled={loading}>
                   {loading ? 'Calculating...' : 'Preview Estimate →'}
                 </button>
+              </div>
+              
+              <div style={{ marginTop: '32px' }}>
+                <label style={labelStyle}>Invite Favorite Providers to Bid (Optional - Max 5)</label>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '12px' }}>Select providers you'd specifically like to notify about this project.</p>
+                <select 
+                  style={{ ...inputStyle, marginBottom: 0, width: '100%' }} 
+                  value=""
+                  disabled={invitedProviders.length >= 5}
+                  onChange={(e) => {
+                    if (e.target.value && !invitedProviders.includes(e.target.value) && invitedProviders.length < 5) {
+                      setInvitedProviders([...invitedProviders, e.target.value]);
+                    }
+                  }}
+                >
+                  <option value="">{invitedProviders.length >= 5 ? "Maximum of 5 providers reached" : "-- Select a provider --"}</option>
+                  {availableProviders.filter(p => !invitedProviders.includes(p._id)).map(p => (
+                    <option key={p._id} value={p._id}>{p.email} ({p.yearsExperience} years exp.)</option>
+                  ))}
+                </select>
+
+                {invitedProviders.length > 0 && (
+                  <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {invitedProviders.map(id => {
+                      const prov = availableProviders.find(p => p._id === id);
+                      if (!prov) return null;
+                      return (
+                        <div key={id} style={{
+                          background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
+                          color: '#6ee7b7', padding: '8px 12px', borderRadius: '20px', fontSize: '0.85rem',
+                          display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600
+                        }}>
+                          <span>{prov.email.split('@')[0]}</span>
+                          <button 
+                            type="button"
+                            onClick={() => setInvitedProviders(invitedProviders.filter(p => p !== id))}
+                            style={{ background: 'transparent', border: 'none', color: '#34d399', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', fontSize: '1rem', marginLeft: '4px' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
