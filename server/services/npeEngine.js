@@ -6,25 +6,14 @@
  * Formula: NPE = (UFP × CAF × hoursPerFP) × hourlyRateLKR
  */
 
-const featureOptions = [
-  { id: 'user_auth',          label: 'User Login / Registration',       baseFP: 8  },
-  { id: 'role_based_access',  label: 'Role-based Access Control',       baseFP: 6  },
-  { id: 'payment',            label: 'Payment Gateway Integration',     baseFP: 15 },
-  { id: 'admin_dashboard',    label: 'Admin Dashboard',                 baseFP: 12 },
-  { id: 'mobile_responsive',  label: 'Mobile Responsive UI',            baseFP: 5  },
-  { id: 'api_integration',    label: 'Third-party API Integration',     baseFP: 10 },
-  { id: 'reporting',          label: 'Reports & Analytics',             baseFP: 10 },
-  { id: 'file_uploads',       label: 'File Upload / Management',        baseFP: 6  },
-  { id: 'real_time',          label: 'Real-time Updates (WebSockets)',  baseFP: 13 },
-  { id: 'custom_workflow',    label: 'Custom Workflow Engine',          baseFP: 20 },
-];
-
 /**
  * Step 1: Sum base function points of selected features (UFP)
+ * @param {Array<string>} selectedFeatureIds - array of IDs
+ * @param {Array<object>} availableFeatures - from NpeConfig document
  */
-function calculateUFP(selectedFeatureIds) {
+function calculateUFP(selectedFeatureIds, availableFeatures) {
   return selectedFeatureIds.reduce((sum, id) => {
-    const feature = featureOptions.find(f => f.id === id);
+    const feature = availableFeatures.find(f => f.id === id);
     return sum + (feature ? feature.baseFP : 0);
   }, 0);
 }
@@ -72,7 +61,7 @@ function estimateHours(ufp, caf, hoursPerFP) {
 function calculateNPE(projectInput, config) {
   const { selectedFeatures = [], integrations = 0, securityLevel = 'basic' } = projectInput;
 
-  const ufp = calculateUFP(selectedFeatures);
+  const ufp = calculateUFP(selectedFeatures, config.features || []);
   const caf = calculateCAF(integrations, securityLevel, ufp, config);
   const totalHours = estimateHours(ufp, caf, config.hoursPerFP);
   const benchmark = Math.round(totalHours * config.hourlyRateLKR);
@@ -94,4 +83,4 @@ function calculateNPE(projectInput, config) {
   };
 }
 
-module.exports = { calculateNPE, calculateUFP, calculateCAF, estimateHours, featureOptions };
+module.exports = { calculateNPE, calculateUFP, calculateCAF, estimateHours };

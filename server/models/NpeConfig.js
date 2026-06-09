@@ -30,6 +30,12 @@ const npeConfigSchema = new mongoose.Schema({
     medium: { type: Number, default: 1.1 }, // UFP 50–100
     large: { type: Number, default: 1.2 },  // UFP > 100
   },
+  // Dynamic list of selectable features
+  features: [{
+    id: { type: String, required: true },
+    label: { type: String, required: true },
+    baseFP: { type: Number, required: true }
+  }],
   // Track who last changed parameters
   updatedBy: {
     type: mongoose.Schema.Types.ObjectId,

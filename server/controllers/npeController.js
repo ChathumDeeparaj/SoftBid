@@ -1,14 +1,30 @@
 const NpeConfig = require('../models/NpeConfig');
 const { calculateNPE } = require('../services/npeEngine');
 
-/**
- * Helper: Get existing config or seed defaults on first run
- */
 const getOrCreateConfig = async () => {
   let config = await NpeConfig.findOne();
+  
+  const defaultFeatures = [
+    { id: 'user_auth',          label: 'User Login / Registration',       baseFP: 8  },
+    { id: 'role_based_access',  label: 'Role-based Access Control',       baseFP: 6  },
+    { id: 'payment',            label: 'Payment Gateway Integration',     baseFP: 15 },
+    { id: 'admin_dashboard',    label: 'Admin Dashboard',                 baseFP: 12 },
+    { id: 'mobile_responsive',  label: 'Mobile Responsive UI',            baseFP: 5  },
+    { id: 'api_integration',    label: 'Third-party API Integration',     baseFP: 10 },
+    { id: 'reporting',          label: 'Reports & Analytics',             baseFP: 10 },
+    { id: 'file_uploads',       label: 'File Upload / Management',        baseFP: 6  },
+    { id: 'real_time',          label: 'Real-time Updates (WebSockets)',  baseFP: 13 },
+    { id: 'custom_workflow',    label: 'Custom Workflow Engine',          baseFP: 20 },
+  ];
+
   if (!config) {
-    config = await NpeConfig.create({});
-    console.log('✅ NPE Config seeded with defaults.');
+    config = await NpeConfig.create({ features: defaultFeatures });
+    console.log('✅ NPE Config seeded with defaults including features.');
+  } else if (!config.features || config.features.length === 0) {
+    // If config exists but features array is missing/empty (due to legacy DB), seed them
+    config.features = defaultFeatures;
+    await config.save();
+    console.log('✅ NPE Config features retroactively seeded.');
   }
   return config;
 };
@@ -60,7 +76,8 @@ const updateNpeConfig = async (req, res) => {
     // Only update fields that were sent — merge cleanly
     const allowedFields = [
       'hoursPerFP', 'hourlyRateLKR',
-      'integrationMultipliers', 'securityMultipliers', 'sizeMultipliers'
+      'integrationMultipliers', 'securityMultipliers', 'sizeMultipliers',
+      'features'
     ];
 
     allowedFields.forEach(field => {

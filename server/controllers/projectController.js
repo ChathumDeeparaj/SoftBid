@@ -22,11 +22,16 @@ const createProject = async (req, res) => {
   try {
     const {
       title, description, timeframe, clientBudgetLKR,
-      selectedFeatures, integrations, securityLevel, riskAccepted
+      selectedFeatures, integrations, securityLevel, riskAccepted,
+      invitedProviders
     } = req.body;
 
     if (!title || !description || !clientBudgetLKR) {
       return res.status(400).json({ message: 'Title, description, and budget are required.' });
+    }
+
+    if (invitedProviders && Array.isArray(invitedProviders) && invitedProviders.length > 5) {
+      return res.status(400).json({ message: 'You can only invite up to 5 favorite service providers.' });
     }
 
     // Load current NPE config and calculate snapshot
@@ -51,6 +56,7 @@ const createProject = async (req, res) => {
       npeBreakdown: npeResult.breakdown,
       npeConfidence: npeResult.confidence,
       client: req.user._id,
+      invitedProviders: invitedProviders || [],
     });
 
     res.status(201).json(project);

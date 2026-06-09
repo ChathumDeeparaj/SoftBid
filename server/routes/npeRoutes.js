@@ -6,9 +6,10 @@ const { protect, superAdminGuard } = require('../middleware/auth');
 // Live NPE estimate preview (any authenticated user can call this during form-fill)
 router.route('/preview').post(protect, getNpePreview);
 
-// Super Admin: read and update NPE formula parameters
-router.route('/config')
-  .get(protect, superAdminGuard, getNpeConfig)
-  .put(protect, superAdminGuard, updateNpeConfig);
+// Read NPE formula parameters (Any authenticated user can read this to power the UI)
+router.route('/config').get(protect, getNpeConfig);
+
+// Super Admin: update NPE formula parameters
+router.route('/config').put(protect, superAdminGuard, updateNpeConfig);
 
 module.exports = router;

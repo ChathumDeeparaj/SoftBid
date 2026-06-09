@@ -65,6 +65,12 @@ const projectSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  
+  // Clients can invite up to 5 favorite service providers
+  invitedProviders: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
 }, { timestamps: true });
 
 const Project = mongoose.model('Project', projectSchema);
