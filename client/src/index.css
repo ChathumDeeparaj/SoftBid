@@ -1,112 +1,69 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap');
 
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-body {
-  margin: 0;
-}
-
-#root {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  text-align: left;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+    /* SoftBid — Luxury Dark Gold Theme */
+    --background:           245 25% 5%;
+    --foreground:           40  40% 93%;
+    --card:                 245 20% 7%;
+    --card-foreground:      40  40% 93%;
+    --popover:              245 18% 12%;
+    --popover-foreground:   40  40% 93%;
+    --primary:              40  63% 55%;   /* #d4a843 gold */
+    --primary-foreground:   245 25% 5%;   /* dark on gold */
+    --secondary:            245 16% 14%;
+    --secondary-foreground: 40  40% 93%;
+    --muted:                245 14% 16%;
+    --muted-foreground:     30  18% 56%;  /* warm muted #9d8f7a */
+    --accent:               40  75% 67%;  /* #e0bc4e lighter gold */
+    --accent-foreground:    245 25% 5%;
+    --destructive:          345 83% 49%;
+    --destructive-foreground: 40 40% 93%;
+    --border:               245 18% 15%;
+    --input:                245 18% 12%;
+    --ring:                 40  63% 55%;
+    --radius:               0.75rem;
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+@layer base {
+  * { @apply border-border box-border; }
+  html { @apply scroll-smooth; }
+  body {
+    @apply bg-luxury-950 text-ivory font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
-p {
-  margin: 0;
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #09090f; }
+::-webkit-scrollbar-thumb { background: #2a2a48; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(212,168,67,0.4); }
+
+/* ── Gold shimmer text utility ── */
+.text-gold-shimmer {
+  background: linear-gradient(90deg, #b8862a, #e0bc4e, #f0c96a, #e0bc4e, #b8862a);
+  background-size: 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+/* ── Glassmorphism ── */
+.glass {
+  background: rgba(17, 17, 24, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 168, 67, 0.08);
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* ── Gold border glow on focus-within ── */
+.gold-focus:focus-within {
+  box-shadow: 0 0 0 2px rgba(212, 168, 67, 0.3);
 }

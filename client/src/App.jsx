@@ -1,17 +1,51 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import ClientDashboard from './pages/ClientDashboard';
 import PostProject from './pages/PostProject';
 import LiveAuction from './pages/LiveAuction';
+import Signup from './pages/Signup';
+import Signin from './pages/Signin';
+import ProvidersList from './pages/ProvidersList';
+import ProviderProfile from './pages/ProviderProfile';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public routes */}
         <Route path="/" element={<Home />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/post-project" element={<PostProject />} />
-        <Route path="/auction/:projectId" element={<LiveAuction />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/signin" element={<Signin />} />
+
+        {/* Role-specific dashboards */}
+        <Route path="/client/dashboard" element={
+          <ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>
+        } />
+        <Route path="/provider/dashboard" element={
+          <ProtectedRoute allowedRoles={['provider']}><Dashboard /></ProtectedRoute>
+        } />
+        <Route path="/admin/dashboard" element={
+          <ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>
+        } />
+
+        {/* Client-only actions */}
+        <Route path="/post-project" element={
+          <ProtectedRoute allowedRoles={['client']}><PostProject /></ProtectedRoute>
+        } />
+
+        {/* Any authenticated user */}
+        <Route path="/providers" element={
+          <ProtectedRoute><ProvidersList /></ProtectedRoute>
+        } />
+        <Route path="/provider/:id" element={
+          <ProtectedRoute><ProviderProfile /></ProtectedRoute>
+        } />
+        <Route path="/project/:projectId/live" element={
+          <ProtectedRoute><LiveAuction /></ProtectedRoute>
+        } />
       </Routes>
     </BrowserRouter>
   );
