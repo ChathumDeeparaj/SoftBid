@@ -103,6 +103,37 @@ const projectSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   }],
+
+  // ── Post-Award Lifecycle ──
+
+  // When the provider formally accepted the contract (status → in-progress)
+  contractAcceptedAt: {
+    type: Date,
+  },
+
+  // Milestones defined and submitted by the provider, approved by the client
+  milestones: [{
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: '' },
+    dueDate: { type: Date },
+    status: {
+      type: String,
+      enum: ['pending', 'submitted', 'approved'],
+      default: 'pending',
+    },
+    submittedAt: { type: Date },
+    approvedAt: { type: Date },
+    providerNote: { type: String, default: '' },   // provider's update message
+    clientNote:   { type: String, default: '' },   // client feedback on approval
+  }],
+
+  // Client's review after project is completed
+  clientReview: {
+    rating: { type: Number, min: 1, max: 5 },      // 1-5 stars
+    comment: { type: String, default: '' },
+    createdAt: { type: Date },
+  },
+
 }, { timestamps: true });
 
 const Project = mongoose.model('Project', projectSchema);

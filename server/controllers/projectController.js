@@ -25,7 +25,7 @@ const createProject = async (req, res) => {
     const {
       title, description, timeframe, clientBudgetLKR,
       selectedFeatures, integrations, securityLevel, riskAccepted,
-      invitedProviders, auctionDurationDays, ahpWeights,
+      invitedProviders, auctionEndsAt: rawAuctionEndsAt, auctionDurationDays, ahpWeights,
     } = req.body;
 
     if (!title || !description || !clientBudgetLKR) {
@@ -36,9 +36,17 @@ const createProject = async (req, res) => {
       return res.status(400).json({ message: 'You can only invite up to 5 favorite service providers.' });
     }
 
-    // Issue #3: Calculate auction end date (default 7 days)
-    const durationDays = Number(auctionDurationDays) || 7;
-    const auctionEndsAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+    // Use client-provided auctionEndsAt if given; fall back to auctionDurationDays or 7 days
+    let auctionEndsAt;
+    if (rawAuctionEndsAt) {
+      auctionEndsAt = new Date(rawAuctionEndsAt);
+      if (isNaN(auctionEndsAt.getTime()) || auctionEndsAt <= new Date()) {
+        return res.status(400).json({ message: 'Bid deadline must be a valid future date.' });
+      }
+    } else {
+      const durationDays = Number(auctionDurationDays) || 7;
+      auctionEndsAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+    }
 
     // Issue #2: Validate AHP weights if provided
     let validatedWeights = { experience: 0.40, quality: 0.40, price: 0.20 };
@@ -131,6 +139,21 @@ const awardProject = async (req, res) => {
       { status: 'rejected' }
     );
 
+    // Notify all viewers in the auction room via socket
+    const io = req.app.get('io');
+    if (io) {
+      io.to(project._id.toString()).emit('auction_awarded', {
+        projectId: project._id.toString(),
+        awardedBidId: bid._id.toString(),
+        awardedProvider: {
+          _id: bid.provider._id,
+          companyName: bid.provider.companyName,
+          email: bid.provider.email,
+        },
+        awardedAt: project.awardedAt,
+      });
+    }
+
     res.status(200).json({ message: 'Project awarded successfully!', project, winningBid: bid });
   } catch (error) {
     console.error('❌ [awardProject] Error:', error.message);
@@ -171,6 +194,213 @@ const completeProject = async (req, res) => {
     res.status(200).json({ message: 'Project marked as completed.', project });
   } catch (error) {
     console.error('❌ [completeProject] Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Provider accepts the awarded contract → status: awarded → in-progress
+// @route   PUT /api/projects/:id/accept
+// @access  Private (Provider — must be the awardedProvider)
+const acceptContract = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id)
+      .populate('client', 'email companyName')
+      .populate('awardedProvider', 'email companyName');
+    if (!project) return res.status(404).json({ message: 'Project not found.' });
+
+    if (!project.awardedProvider || project.awardedProvider._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the awarded provider can accept this contract.' });
+    }
+    if (project.status !== 'awarded') {
+      return res.status(400).json({ message: `Cannot accept — project status is "${project.status}".` });
+    }
+
+    project.status = 'in-progress';
+    project.contractAcceptedAt = new Date();
+    await project.save();
+
+    // Notify the client via socket
+    const io = req.app.get('io');
+    if (io) {
+      io.to(project._id.toString()).emit('contract_accepted', {
+        projectId: project._id.toString(),
+        provider: {
+          _id: project.awardedProvider._id,
+          companyName: project.awardedProvider.companyName,
+          email: project.awardedProvider.email,
+        },
+        acceptedAt: project.contractAcceptedAt,
+      });
+    }
+
+    res.status(200).json({ message: 'Contract accepted. Project is now in progress.', project });
+  } catch (error) {
+    console.error('❌ [acceptContract] Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Provider adds a milestone to the project
+// @route   POST /api/projects/:id/milestones
+// @access  Private (Provider — must be the awardedProvider)
+const addMilestone = async (req, res) => {
+  try {
+    const { title, description, dueDate, providerNote } = req.body;
+    if (!title) return res.status(400).json({ message: 'Milestone title is required.' });
+
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found.' });
+
+    if (!project.awardedProvider || project.awardedProvider.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the awarded provider can add milestones.' });
+    }
+    if (!['in-progress', 'awarded'].includes(project.status)) {
+      return res.status(400).json({ message: 'Milestones can only be added to in-progress projects.' });
+    }
+
+    const milestone = {
+      title,
+      description: description || '',
+      dueDate: dueDate ? new Date(dueDate) : undefined,
+      providerNote: providerNote || '',
+      status: 'submitted',
+      submittedAt: new Date(),
+    };
+    project.milestones.push(milestone);
+    await project.save();
+
+    const newMilestone = project.milestones[project.milestones.length - 1];
+
+    // Notify client via socket
+    const io = req.app.get('io');
+    if (io) {
+      io.to(project._id.toString()).emit('milestone_submitted', {
+        projectId: project._id.toString(),
+        milestone: newMilestone,
+      });
+    }
+
+    res.status(201).json({ message: 'Milestone submitted for client review.', milestone: newMilestone, project });
+  } catch (error) {
+    console.error('❌ [addMilestone] Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Client approves a submitted milestone
+// @route   PUT /api/projects/:id/milestones/:milestoneId/approve
+// @access  Private (Client — project owner only)
+const approveMilestone = async (req, res) => {
+  try {
+    const { clientNote } = req.body;
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found.' });
+
+    if (project.client.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the project owner can approve milestones.' });
+    }
+
+    const milestone = project.milestones.id(req.params.milestoneId);
+    if (!milestone) return res.status(404).json({ message: 'Milestone not found.' });
+    if (milestone.status !== 'submitted') {
+      return res.status(400).json({ message: 'Only submitted milestones can be approved.' });
+    }
+
+    milestone.status = 'approved';
+    milestone.approvedAt = new Date();
+    milestone.clientNote = clientNote || '';
+    await project.save();
+
+    // Notify provider via socket
+    const io = req.app.get('io');
+    if (io) {
+      io.to(project._id.toString()).emit('milestone_approved', {
+        projectId: project._id.toString(),
+        milestoneId: milestone._id.toString(),
+        milestoneTitle: milestone.title,
+        clientNote: milestone.clientNote,
+        approvedAt: milestone.approvedAt,
+      });
+    }
+
+    res.status(200).json({ message: 'Milestone approved.', milestone, project });
+  } catch (error) {
+    console.error('❌ [approveMilestone] Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Client submits a star review after project completion
+// @route   POST /api/projects/:id/review
+// @access  Private (Client — project owner only)
+const submitReview = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5.' });
+    }
+
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found.' });
+
+    if (project.client.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the project owner can leave a review.' });
+    }
+    if (project.status !== 'completed') {
+      return res.status(400).json({ message: 'Reviews can only be left on completed projects.' });
+    }
+    if (project.clientReview?.rating) {
+      return res.status(400).json({ message: 'You have already reviewed this project.' });
+    }
+
+    project.clientReview = { rating: Number(rating), comment: comment || '', createdAt: new Date() };
+    await project.save();
+
+    // Update provider's average rating on their User record
+    if (project.awardedProvider) {
+      const allReviewed = await Project.find({
+        awardedProvider: project.awardedProvider,
+        'clientReview.rating': { $exists: true },
+      }).select('clientReview.rating');
+
+      const avg = allReviewed.reduce((sum, p) => sum + p.clientReview.rating, 0) / allReviewed.length;
+      await User.findByIdAndUpdate(project.awardedProvider, {
+        averageRating: Math.round(avg * 10) / 10,
+        reviewCount: allReviewed.length,
+      });
+    }
+
+    // Notify provider via socket
+    const io = req.app.get('io');
+    if (io) {
+      io.to(project._id.toString()).emit('project_reviewed', {
+        projectId: project._id.toString(),
+        rating,
+        comment: comment || '',
+      });
+    }
+
+    res.status(201).json({ message: 'Review submitted. Thank you!', project });
+  } catch (error) {
+    console.error('❌ [submitReview] Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Provider: get all projects they have won (awarded/in-progress/completed)
+// @route   GET /api/projects/won
+// @access  Private (Provider only)
+const getWonProjects = async (req, res) => {
+  try {
+    const projects = await Project.find({
+      awardedProvider: req.user._id,
+      status: { $in: ['awarded', 'in-progress', 'completed'] },
+    })
+      .populate('client', 'email companyName')
+      .sort({ awardedAt: -1 });
+    res.status(200).json(projects);
+  } catch (error) {
+    console.error('❌ [getWonProjects] Error:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -250,4 +480,6 @@ module.exports = {
   getMyProjects, createProject, getAllProjects,
   updateProjectStatus, getProjectById, getOpenProjects,
   awardProject, completeProject,
+  acceptContract, addMilestone, approveMilestone, submitReview, getWonProjects,
 };
+

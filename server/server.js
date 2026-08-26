@@ -40,7 +40,7 @@ app.set('io', io);
 // Connect to Database
 connectDB().then(() => {
   // Issue #3: Start auction scheduler after DB is connected
-  startAuctionScheduler();
+  startAuctionScheduler(io);
 });
 connectRedis();
 

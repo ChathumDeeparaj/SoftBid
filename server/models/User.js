@@ -63,6 +63,18 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0, // 0.0 to 5.0
   },
+  // Computed from client reviews after project completion
+  averageRating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5,
+  },
+  reviewCount: {
+    type: Number,
+    default: 0,
+  },
+
   country: {
     type: String,
     default: 'United States',
