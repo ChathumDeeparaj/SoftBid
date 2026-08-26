@@ -10,6 +10,8 @@ import Signin from './pages/Signin';
 import ProvidersList from './pages/ProvidersList';
 import ProviderProfile from './pages/ProviderProfile';
 import AdminDashboard from './pages/AdminDashboard';
+import ProviderWorkspace from './pages/ProviderWorkspace';
+
 
 function App() {
   return (
@@ -45,6 +47,11 @@ function App() {
         } />
         <Route path="/project/:projectId/live" element={
           <ProtectedRoute><LiveAuction /></ProtectedRoute>
+        } />
+
+        {/* Provider workspace — post-award project management */}
+        <Route path="/project/:projectId/workspace" element={
+          <ProtectedRoute allowedRoles={['provider']}><ProviderWorkspace /></ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>
