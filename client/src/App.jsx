@@ -11,11 +11,15 @@ import ProvidersList from './pages/ProvidersList';
 import ProviderProfile from './pages/ProviderProfile';
 import AdminDashboard from './pages/AdminDashboard';
 import ProviderWorkspace from './pages/ProviderWorkspace';
+import AdminMessages from './pages/AdminMessages';
+import GlobalSocketNotifier from './components/GlobalSocketNotifier';
+
 
 
 function App() {
   return (
     <BrowserRouter>
+      <GlobalSocketNotifier />
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<Home />} />
@@ -52,6 +56,11 @@ function App() {
         {/* Provider workspace — post-award project management */}
         <Route path="/project/:projectId/workspace" element={
           <ProtectedRoute allowedRoles={['provider']}><ProviderWorkspace /></ProtectedRoute>
+        } />
+
+        {/* Admin: message monitoring */}
+        <Route path="/admin/messages" element={
+          <ProtectedRoute allowedRoles={['admin']}><AdminMessages /></ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>

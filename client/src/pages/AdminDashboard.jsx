@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Layers, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { Settings, Layers, ChevronRight, Plus, Trash2, MessageSquare, ShieldAlert } from 'lucide-react';
+import { io } from 'socket.io-client';
 import Navbar from '@/components/Navbar';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +22,9 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [projects, setProjects] = useState([]);
   const [npeConfig, setNpeConfig] = useState(null);
+  const [flaggedCount, setFlaggedCount] = useState(0);
+  const socketRef = useRef(null);
+
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -37,14 +42,31 @@ export default function AdminDashboard() {
           const npeRes = await api.get('/npe/config');
           if (npeRes.data) setNpeConfig(npeRes.data);
         }
+        // Fetch pending flag count for badge
+        const countRes = await api.get('/messages/flagged/count');
+        setFlaggedCount(countRes.data.count || 0);
       } catch (err) {
         setError(err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
     };
+
     fetchAdminData();
+
+    // Real-time: listen for new flags to update badge count
+    socketRef.current = io('http://localhost:5001', { auth: { token } });
+    socketRef.current.on('message_flagged', () => {
+      setFlaggedCount((c) => c + 1);
+    });
+    socketRef.current.on('flag_resolved', () => {
+      setFlaggedCount((c) => Math.max(0, c - 1));
+    });
+
+    return () => socketRef.current?.disconnect();
   }, [navigate]);
+
+
 
   const handleUpdateConfig = async (e) => {
     e.preventDefault();
@@ -86,6 +108,15 @@ export default function AdminDashboard() {
           <TabsList className="mb-6">
             <TabsTrigger value="projects">
               <Layers className="w-4 h-4 mr-2" /> All Projects
+            </TabsTrigger>
+            <TabsTrigger value="messages" onClick={() => navigate('/admin/messages')}>
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Message Monitor
+              {flaggedCount > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold animate-pulse">
+                  {flaggedCount}
+                </span>
+              )}
             </TabsTrigger>
             {user?.isSuperAdmin && (
               <TabsTrigger value="npe">

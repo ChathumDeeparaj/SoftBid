@@ -16,6 +16,8 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import api from '@/services/api';
 import { io } from 'socket.io-client';
+import ProjectChat from '@/components/ProjectChat';
+
 
 // ── Milestone status config ───────────────────────────────────────────────────
 const MS_CONFIG = {
@@ -63,8 +65,10 @@ export default function ProviderWorkspace() {
   // Accept contract
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const socketRef = useRef(null);
+
 
   const refetch = useCallback(async () => {
     try {
@@ -83,7 +87,9 @@ export default function ProviderWorkspace() {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (payload.role !== 'provider') { navigate('/dashboard'); return; }
+      setCurrentUserId(payload.id);
     } catch { navigate('/signin'); return; }
+
 
     // Socket
     socketRef.current = io('http://localhost:5001', {
@@ -514,6 +520,27 @@ export default function ProviderWorkspace() {
             )}
           </CardContent>
         </Card>
+
+        {/* ── Project Chat ─────────────────────────────────────────────── */}
+        {project.status !== 'awarded' && project.client && (
+          <Card className="border-white/8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2.5 text-base">
+                <Send className="w-4 h-4 text-gold-400" /> Project Chat
+              </CardTitle>
+              <p className="text-xs text-ivory-subtle">
+                All messages are monitored. Do not share contact information.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0" style={{ height: '480px', display: 'flex', flexDirection: 'column' }}>
+              <ProjectChat
+                projectId={projectId}
+                receiverId={project.client?._id || project.client}
+                currentUserId={currentUserId}
+              />
+            </CardContent>
+          </Card>
+        )}
 
       </div>
     </div>
