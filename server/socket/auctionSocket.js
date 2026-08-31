@@ -26,6 +26,16 @@ const initAuctionSockets = (io) => {
   io.on('connection', (socket) => {
     console.log(`[Socket] Authenticated client connected: ${socket.id} (user: ${socket.userId}, role: ${socket.userRole})`);
 
+    // Auto-join personal room for direct notifications (warnings, bans)
+    socket.join(socket.userId);
+
+    // Auto-join admin alert room if admin
+    if (socket.userRole === 'admin') {
+      socket.join('admin:alerts');
+      console.log(`[Socket] Admin ${socket.id} joined admin:alerts room`);
+    }
+
+    // ── Auction rooms ─────────────────────────────────────────────────────────
     socket.on('join_auction', (projectId) => {
       socket.join(projectId);
       console.log(`[Socket] Client ${socket.id} joined auction room: ${projectId}`);
@@ -35,6 +45,16 @@ const initAuctionSockets = (io) => {
     socket.on('leave_auction', (projectId) => {
       socket.leave(projectId);
       console.log(`[Socket] Client ${socket.id} left auction room: ${projectId}`);
+    });
+
+    // ── Chat rooms (same room ID as project ID) ───────────────────────────────
+    socket.on('join_chat', (projectId) => {
+      socket.join(projectId);
+      console.log(`[Socket] Client ${socket.id} joined chat room: ${projectId}`);
+    });
+
+    socket.on('leave_chat', (projectId) => {
+      socket.leave(projectId);
     });
 
     socket.on('disconnect', (reason) => {

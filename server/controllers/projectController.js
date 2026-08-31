@@ -3,6 +3,8 @@ const Bid = require('../models/Bid');
 const User = require('../models/User');
 const NpeConfig = require('../models/NpeConfig');
 const { calculateNPE } = require('../services/npeEngine');
+const { analyzeMessage } = require('../services/messageGuard');
+
 
 // @desc    Get logged in user's (client's) projects
 // @route   GET /api/projects/my-projects
@@ -259,15 +261,54 @@ const addMilestone = async (req, res) => {
     }
 
     const milestone = {
-      title,
-      description: description || '',
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-      providerNote: providerNote || '',
+      title:        analyzeMessage(title).sanitized,
+      description:  analyzeMessage(description || '').sanitized,
+      dueDate:      dueDate ? new Date(dueDate) : undefined,
+      providerNote: analyzeMessage(providerNote || '').sanitized,
       status: 'submitted',
       submittedAt: new Date(),
     };
+
+    // ── Run guard on all text fields ─────────────────────────────────────────
+    const combinedText = `${title} ${description || ''} ${providerNote || ''}`;
+    const guard = analyzeMessage(combinedText);
+    if (guard.flagged) {
+      // Save as a real Message document so admin can resolve (Warn/Ban/Dismiss) it
+      const Message = require('../models/Message');
+      const savedFlag = await Message.create({
+        project: project._id,
+        sender: req.user._id,
+        receiver: project.client,           // client reviews milestones
+        content: `[MILESTONE] ${milestone.title} ${milestone.description} ${milestone.providerNote}`,
+        rawContent: `[MILESTONE NOTE] ${combinedText}`,
+        flagged: true,
+        flagSeverity: guard.flagSeverity,
+        flagReasons: guard.flagReasons,
+        wasRedacted: guard.wasRedacted,
+        flagResolution: 'pending',
+      });
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to('admin:alerts').emit('message_flagged', {
+          messageId: savedFlag._id,
+          projectId: project._id.toString(),
+          projectTitle: project.title,
+          sender: { _id: req.user._id, name: req.user.companyName || req.user.email, role: req.user.role },
+          rawContent: savedFlag.rawContent,
+          sanitizedContent: savedFlag.content,
+          flagSeverity: guard.flagSeverity,
+          flagReasons: guard.flagReasons,
+          wasRedacted: guard.wasRedacted,
+          sentAt: savedFlag.createdAt,
+        });
+      }
+      console.warn(`⚠️ [addMilestone] Flagged content saved (${savedFlag._id}) from ${req.user._id}: ${guard.flagReasons.join(', ')}`);
+    }
+
     project.milestones.push(milestone);
     await project.save();
+
 
     const newMilestone = project.milestones[project.milestones.length - 1];
 

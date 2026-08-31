@@ -79,6 +79,10 @@ app.use('/api/npe', require('./routes/npeRoutes'));
 // Bid Routes
 app.use('/api/bids', require('./routes/bidRoutes'));
 
+// Message Routes (in-platform chat + admin monitoring)
+app.use('/api/messages', require('./routes/messageRoutes'));
+
+
 // Start Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

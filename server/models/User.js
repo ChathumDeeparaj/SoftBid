@@ -41,6 +41,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false, // Only manually set by a DB admin for the super admin account
   },
+  // Set to true by admin when user violates platform policies
+  isBanned: {
+    type: Boolean,
+    default: false,
+  },
+
   // Profile specific fields
   description: {
     type: String,
